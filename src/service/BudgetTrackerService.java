@@ -1,7 +1,10 @@
 package service;
 
 import model.*;
+
+import java.time.LocalDate;
 import java.util.Scanner;
+import java.lang.Math;
 
 public class BudgetTrackerService {
 
@@ -23,17 +26,21 @@ public class BudgetTrackerService {
         return day;
     }
 
-    public static void addTransaction(BudgetTracker tracker,
-                               float amount,
-                               String description) {
-        Scanner scanner = new Scanner(System.in);
-
-        System.out.print("Enter date (YYYYMMDD): ");
-        int date = scanner.nextInt();
+    public static void addOperation(BudgetTracker tracker,
+                                    float amount,
+                                    String description, int date) {
 
         DailyRecord day = addDay(tracker, date);
-        day.transactions.add(new Transaction(amount, description));
-        System.out.printf("Added transaction: %.2f dollars on %d\n", amount, date);
+        day.operations.add(new Operation(amount, description));
+        System.out.printf("Added operation: %.2f dollars on %d\n", amount, date);
+    }
+
+    public static void addOperation(BudgetTracker tracker,
+                                    float amount,
+                                    String description) {
+        LocalDate today = LocalDate.now();
+        int todayDate = today.getYear()*10000+today.getMonthValue()*100+today.getDayOfMonth();
+        addOperation(tracker, amount, description, todayDate);
     }
 
 
@@ -52,7 +59,15 @@ public class BudgetTrackerService {
         scanner.nextLine();
         String description = scanner.nextLine();
 
-        addTransaction(tracker, amount, description);
+        System.out.print("Enter date (YYYYMMDD) or write today: ");
+        String dayOfOperation = scanner.next();
+        if (!dayOfOperation.equals("today")) {
+            int dateOfOperation = Integer.parseInt(dayOfOperation);
+            addOperation(tracker, amount, description, dateOfOperation);
+        }
+        else {
+            addOperation(tracker, amount, description);
+        }
     }
 
 
@@ -61,21 +76,19 @@ public class BudgetTrackerService {
 
         System.out.print("Enter amount of expense: ");
         float amount = scanner.nextFloat();
-        float currentBalance = getBalance(tracker);
-        if (currentBalance < amount) {
-            System.out.printf("Wow, your expenses are big lately! You better start saving!%n", currentBalance);
-        }
         if (amount > 0) {
             amount = -amount;
         }
-
-
+        float currentNetBalance = getNetBalance(tracker);
+        if (currentNetBalance < Math.abs(amount)) {
+            System.out.printf("Wow, your expenses are big lately! You better start saving!%n Your current net balance is %f", currentNetBalance);
+        }
 
         System.out.print("Enter description: ");
         scanner.nextLine();
         String description = scanner.nextLine();
 
-        addTransaction(tracker, amount, description);
+        addOperation(tracker, amount, description);
     }
 
     public static float getDayTotal(BudgetTracker tracker, int date) {
@@ -85,13 +98,13 @@ public class BudgetTrackerService {
         }
 
         float total = 0;
-        for (Transaction t : day.transactions) {
+        for (Operation t : day.operations) {
             total += t.amount;
         }
         return total;
     }
 
-    public static float getBalance(BudgetTracker tracker) {
+    public static float getNetBalance(BudgetTracker tracker) {
         float total = 0;
         for (DailyRecord day : tracker.days) {
             total += getDayTotal(tracker, day.date);
@@ -99,8 +112,89 @@ public class BudgetTrackerService {
         return total;
     }
 
-    public static void showLastTransactions(BudgetTracker tracker, int limit){}
+    public static void showOperations(BudgetTracker tracker, int date){
+        for (DailyRecord day : tracker.days) {
+            System.out.println(day.operations);
+        }
+    }
 
-    public static void showDayTransactions(BudgetTracker tracker, int date){}
+    public static void showOperations(BudgetTracker tracker) {
+        int printed = 0;
+        System.out.println("The list of 5 last entered operations:");
 
+        for (int d = tracker.days.size() - 1; d >= 0 && printed < 5; d--) {
+            DailyRecord day = tracker.days.get(d);
+
+            for (int t = day.operations.size() - 1; t >= 0 && printed < 5; t--) {
+                Operation operation = day.operations.get(t);
+
+                System.out.printf(
+                        "%d | %.2f | %s%n",
+                        day.date,
+                        operation.amount,
+                        operation.description
+                );
+
+                printed++;
+            }
+        }
+
+        if (printed == 0) {
+            System.out.println("No operations");
+        }
+    }
+
+    public static void showIncome(BudgetTracker tracker){
+        int printed = 0;
+        System.out.println("The list of 5 last entered operations:");
+
+        for (int d = tracker.days.size() - 1; d >= 0 && printed < 5; d--) {
+            DailyRecord day = tracker.days.get(d);
+
+            for (int t = day.operations.size() - 1; t >= 0 && printed < 5; t--) {
+                Operation operation = day.operations.get(t);
+                if (operation.amount > 0) {
+                    System.out.printf(
+                            "%d | %.2f | %s%n",
+                            day.date,
+                            operation.amount,
+                            operation.description
+                    );
+
+                    printed++;
+                }
+            }
+        }
+
+        if (printed == 0) {
+            System.out.println("No income operations");
+        }
+    }
+
+    public static void showExpense(BudgetTracker tracker){
+        int printed = 0;
+        System.out.println("The list of 5 last entered operations:");
+
+        for (int d = tracker.days.size() - 1; d >= 0 && printed < 5; d--) {
+            DailyRecord day = tracker.days.get(d);
+
+            for (int t = day.operations.size() - 1; t >= 0 && printed < 5; t--) {
+                Operation operation = day.operations.get(t);
+                if (operation.amount < 0) {
+                    System.out.printf(
+                            "%d | %.2f | %s%n",
+                            day.date,
+                            operation.amount,
+                            operation.description
+                    );
+
+                    printed++;
+                }
+            }
+        }
+
+        if (printed == 0) {
+            System.out.println("No income operations");
+        }
+    }
 }
